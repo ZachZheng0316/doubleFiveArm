@@ -1,0 +1,23 @@
+#ifndef _DYNAMIXEL_ROBOTISDEF_HEADER
+#define _DYNAMIXEL_ROBOTISDEF_HEADER
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef char                INT8_T;
+typedef short int           INT16_T;
+typedef int                 INT32_T;
+
+typedef unsigned char       UINT8_T;
+typedef unsigned short int  UINT16_T;
+typedef unsigned int        UINT32_T;
+
+typedef int                 bool;
+#define true                
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

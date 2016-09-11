@@ -1,2 +1,2 @@
 # doubleSixArm
-双臂六轴 project
+双臂五轴 project

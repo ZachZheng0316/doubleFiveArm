@@ -22,7 +22,7 @@ static int LKeyPos[10][5];
 static int RKeyPos[10][5];
 static char LKeyPosPath[] = "LKeyPos.txt";
 static char RKeyPosPath[] = "RKeyPos.txt";
-static char SongPath[] = "chongerfei.txt";
+static char SongPath[] = "smallW.txt";
 static char TrajPath[] = "trajectory.txt";
 
 //子功能函数

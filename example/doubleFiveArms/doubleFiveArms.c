@@ -20,6 +20,7 @@ static int CurLArm[5];
 static int CurRArm[5];
 static int CurKeyNum;
 static int pFlag = 0;//0:表示初始值；1：表示正在拼接；2：表示拼接完成
+static int hFlag = 0;//0:表示初始值；1：表示正在进行敲击；2：表示敲击结束
 static char temp[60] = {0, };
 static int LKeyPos[10][5]; 
 static int RKeyPos[10][5];
@@ -36,6 +37,8 @@ void hit_and_hit(int num);                   //敲打音乐
 void play_misic(int musicNum);               //演奏曲目
 void hit_key(int keyNum);                    //即兴演奏
 void play_temp_music(char *keyNum); 		 //演奏临时曲目
+int check_temprature();						 //检测温度
+void recovery_pos();						 //恢复到当前位置
 
 //框架程序
 void initial_sys(int device, int bandnum);  //系统初始化
@@ -44,6 +47,7 @@ void receive_instruct(unsigned char *instruct);
 void execute_instruct(unsigned char *instruct);
 void finish_instruct(unsigned char *feedback);
 void relax_arm();                           //放松手臂
+void enable_arm();							//上起刚度
 void print();                               //打印此时温度
 void finish_sys();                          //关闭系统
 
@@ -106,18 +110,18 @@ void initial_sys(int device, int bandnum)
     
     //读取琴键位置文件
     read_key_pos();
-
 }
 
 //设置初始化位置
 void set_default_pos()
 {
-    int i, result;
+    int i, result, result1;
     
     //设置速度
     for(i = 0; i < SERVO_NUM; i++) {
-        result = set_one_servo_word(i+1, Moving_Speed, 60);
-        if(0 == result) {
+    	result1 = set_one_servo_word(i+1, Torque_Enable, 1);
+        result = set_one_servo_word(i+1, Moving_Speed, 50);
+        if((0 == result) || (0 == result1)) {
             printf("err:default_pos set speed failed...\n");
             exit(1);
         }
@@ -125,17 +129,19 @@ void set_default_pos()
     
     //设置目标位置
     set_one_servo_word(5, Goal_Position, RKeyPos[5][4]);
-    delay_us(200*1000); //200ms
+    //delay_us(1000*1000); //200ms
     set_one_servo_word(10, Goal_Position, LKeyPos[5][4]);
-    delay_us(200*1000); //200ms
+    delay_us(1000*1000); //1s
     for(i = 0; i < 4; i++) {
         set_one_servo_word(i + 1, Goal_Position, RKeyPos[5][i]);
         set_one_servo_word(i + 6, Goal_Position, LKeyPos[5][i]);
+        delay_us(200*1000);
     }
     
     //等待运动停止
     wait_arm_stop_exten('L', 10);
     wait_arm_stop_exten('R', 10);
+    delay_us(1000*1000);
     
     //更新当前姿态
     for(i = 0; i < 5; i++) {
@@ -197,6 +203,7 @@ void execute_instruct(unsigned char *instruct)
             play_misic(num);
             
             //反馈信息
+            delay_us(1000*1000);
             finish_instruct((unsigned char *)"oover");
             
             //清空temp
@@ -204,18 +211,49 @@ void execute_instruct(unsigned char *instruct)
             
             //relax
             relax_arm();
+            
+            //设置hFlag
+            hFlag = 0;
+            pFlag = 0;
         }
         else if('h' == instruct[0]){
-            //解析信息
-            strcpy(temp, (char *)&instruct[1]);
-            num = atoi(temp);
-            printf("the keysNum %d\n", num);
+        	if(1 == check_temprature()){
+        		relax_arm(); //松掉刚度
+        		finish_instruct((unsigned char *)"hhhh");
+        		
+        		//进入等待温度下降的循环
+        		while(2 != check_temprature())
+        		
+        		//上起刚度
+        		enable_arm();
+        		
+        		//恢复到当前位置
+        		recovery_pos();
+        	}
+        	else{
+				//解析信息
+				strcpy(temp, (char *)&instruct[1]);
+				num = atoi(temp);
+				printf("the keysNum %d\n", num);
 
-            //敲击琴键
-            hit_key(num);
-            
-            //反馈信息
-            finish_instruct((unsigned char *)"ook");
+				if(0 == hFlag){
+					//首次敲击
+					hFlag = 1;
+			
+					//从当前位置上刚度起来
+					enable_arm();
+					recovery_pos();
+				}
+				
+				//敲击琴键
+				hit_key(num);
+				
+				//反馈信息
+				finish_instruct((unsigned char *)"ook");
+			}
+			
+			//设置pFlag标志
+			pFlag = 0;
         }
         else{ //('p' == instruct[0])
         	num = strlen((char *)instruct);
@@ -246,6 +284,9 @@ void execute_instruct(unsigned char *instruct)
            		//设置pFlag
            		pFlag = 1;//表示正在拼接
            	}
+           	
+           	//设置hFlag
+           	hFlag = 0;
         }
         
         //打印温度
@@ -281,7 +322,7 @@ void execute_instruct(unsigned char *instruct)
     		relax_arm();
     	}
     	
-    	if(!pFlag) {
+    	if(0 == pFlag) {
     		finish_instruct((unsigned char *)"ook");
     		relax_arm();
     	}
@@ -314,6 +355,15 @@ void relax_arm()
     for(i = 1; i <= SERVO_NUM; i++)
         set_one_servo_byte(i, Torque_Enable, 0);
 }
+
+//上起刚度
+void enable_arm()
+{
+	int i;
+	
+	for(i = 1; i <= SERVO_NUM; i++)
+		set_one_servo_byte(i, Torque_Enable, 1);
+}	
 
 //打印此时温度
 void print()
@@ -649,7 +699,7 @@ void play_misic(int musicNum)
     CurKeyNum = 14;
     from_A_to_B(CurKeyNum, 5);
     CurKeyNum = 5;
-    
+    delay_us(1000*1000);
     fclose(fpR);
 }
 
@@ -665,6 +715,8 @@ void hit_key(int keyNum)
         wait_arm_stop_exten('L', 10);
     else
         wait_arm_stop_exten('R', 10);
+    
+    delay_us(1000 * 1000);
     
     //打击琴键
     hit_and_hit(keyNum);
@@ -697,7 +749,7 @@ void play_temp_music(char *keyNum)
         finish_instruct((unsigned char *)keyChar);
         
         //延时一定的时间
-        delay_us(1 * 1000 * 1000);
+        delay_us(400 * 1000);
     }
     
     //回到初始位置
@@ -705,4 +757,57 @@ void play_temp_music(char *keyNum)
     CurKeyNum = 14;
     from_A_to_B(CurKeyNum, 5);
     CurKeyNum = 5;
+    
+    delay_us(1000*1000);
+}
+
+//检测温度
+//如果温度超过70度，则松掉刚度,返回1。
+//如果温度全部在65度以下，返回2，表示要上起刚度。
+int check_temprature()
+{
+	int i, temprature, tempNum = 0;
+	for(i = 1; i <= SERVO_NUM; i++) {
+        temprature = get_one_servo_byte(i, 43);
+        if(temprature >= 70)
+        	return 1;
+        else if(temprature <= 65)
+        	tempNum += 1;
+        else {
+        }
+    }
+    
+    if(10 == tempNum)
+    	return 2;
+    
+    return 0;
+}
+
+//恢复到当前位置
+void recovery_pos()
+{
+	int i, result;
+	//设置速度
+    for(i = 0; i < SERVO_NUM; i++) {
+        result = set_one_servo_word(i+1, Moving_Speed, 50);
+        if(0 == result) {
+            printf("err:default_pos set speed failed...\n");
+            exit(1);
+        }
+    }
+    
+    //设置目标位置
+    set_one_servo_word(5, Goal_Position, CurRArm[4]);
+    set_one_servo_word(10, Goal_Position, CurLArm[4]);
+    delay_us(1000*1000); //1s
+    for(i = 0; i < 4; i++) {
+        set_one_servo_word(i + 1, Goal_Position, CurRArm[i]);
+        set_one_servo_word(i + 6, Goal_Position, CurLArm[i]);
+        delay_us(200*1000);
+    }
+    
+    //等待运动停止
+    wait_arm_stop_exten('L', 10);
+    wait_arm_stop_exten('R', 10);
+    delay_us(1000*1000);
 }

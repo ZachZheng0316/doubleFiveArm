@@ -19,6 +19,8 @@ static int BAUDNUM = 1;
 static int CurLArm[5];
 static int CurRArm[5];
 static int CurKeyNum;
+static int CurLNum;
+static int CurRNum;
 static int pFlag = 0;//0:表示初始值；1：表示正在拼接；2：表示拼接完成
 static int hFlag = 0;//0:表示初始值；1：表示正在进行敲击；2：表示敲击结束
 static char temp[60] = {0, };
@@ -217,25 +219,34 @@ void execute_instruct(unsigned char *instruct)
             pFlag = 0;
         }
         else if('h' == instruct[0]){
-        	if(1 == check_temprature()){
+        	if(1 == check_temprature()){ //检测温度是否过高
         		relax_arm(); //松掉刚度
+        		finish_instruct((unsigned char *)"ook");
+        		
+        		delay_us(1 * 1000 * 1000);
+        		
+        		//发送温度高信号
         		finish_instruct((unsigned char *)"hhhh");
         		
         		//进入等待温度下降的循环
-        		while(2 != check_temprature())
+        		while(2 != check_temprature()){
+        		}
         		
         		//上起刚度
         		enable_arm();
         		
         		//恢复到当前位置
         		recovery_pos();
+        		
+        		//发送温度下降了的信号
+        		finish_instruct((unsigned char *)"llll");
         	}
-        	else{
+        	else{//温度在允许工作的范围下
 				//解析信息
 				strcpy(temp, (char *)&instruct[1]);
 				num = atoi(temp);
 				printf("the keysNum %d\n", num);
-
+				
 				if(0 == hFlag){
 					//首次敲击
 					hFlag = 1;
@@ -297,17 +308,26 @@ void execute_instruct(unsigned char *instruct)
     	if(1 == pFlag) { //表示正在拼接
     		num = strlen((char *)instruct);
     		
-    		//字符串"xxxxxxxxp"
+    		//字符串"xxxxxxxxp", 拼接结束
     		if('p' == instruct[num -1]) {
     			strcat(temp, (char *)instruct);
-    			pFlag = 2;
+    			//pFlag = 2;
+    			play_temp_music(temp); 					   //解析并处理字符信息
+    			finish_instruct((unsigned char *)"oover"); //反馈信息
+    			pFlag = 0; 								   //回到初始值状态
+    			memset(temp, 0, 60);					   //清空temp
+    			relax_arm();							   //松掉刚度
     		}
-    		else{
+    		else{//拼接未结束，继续拼接
     			//字符串"xxxxxxxxx"
     			strcat(temp, (char *)instruct);
     		}
     	}
-    	
+    	else{
+    		finish_instruct((unsigned char *)"ook");
+    		relax_arm();
+    	}
+    	/*
     	if(2 == pFlag) { //拼接结束
     		play_temp_music(temp); //解析并处理字符信息
 
@@ -325,7 +345,7 @@ void execute_instruct(unsigned char *instruct)
     	if(0 == pFlag) {
     		finish_instruct((unsigned char *)"ook");
     		relax_arm();
-    	}
+    	}*/
     }
 }
 
@@ -734,7 +754,6 @@ void play_temp_music(char *keyNum)
     amount = strlen(keyNum);
     
     //位置初始化
-    
     for(i = 0; i < amount-1; i += 3) {
         for(j = 0; j < 3; j++) 
             keyChar[j] = keyNum[i+j];
@@ -749,7 +768,7 @@ void play_temp_music(char *keyNum)
         finish_instruct((unsigned char *)keyChar);
         
         //延时一定的时间
-        delay_us(400 * 1000);
+        delay_us(200 * 1000);
     }
     
     //回到初始位置

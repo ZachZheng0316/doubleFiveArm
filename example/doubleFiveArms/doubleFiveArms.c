@@ -153,6 +153,8 @@ void set_default_pos()
     
     //设置当前位置
     CurKeyNum = 5;
+    CurLNum = 5;
+    CurRNum = 14;
 }
 
 void receive_instruct(unsigned char *instruct)
@@ -247,24 +249,37 @@ void execute_instruct(unsigned char *instruct)
 				num = atoi(temp);
 				printf("the keysNum %d\n", num);
 				
-				if(0 == hFlag){
-					//首次敲击
-					hFlag = 1;
-			
-					//从当前位置上刚度起来
-					enable_arm();
-					recovery_pos();
+				if(0 == num){//退出hxxx模式
+					//检测左臂是否在初始位置
+					if(5 != CurLNum) {
+						from_A_to_B(CurLNum, 5);
+						CurKeyNum = 5;
+					}
+					//检测右臂是否在初始位置
+					if(14 != CurRNum) {
+						from_A_to_B(CurRNum, 14);
+						CurKeyNum = 14;
+					}
+					
+					//等待运动到初始位置
+					wait_arm_stop_exten('L', 10);
+    				wait_arm_stop_exten('R', 10);
+    				delay_us(1000*1000);
+    				
+    				//松掉刚度
+    				relax_arm();
 				}
-				
-				//敲击琴键
-				hit_key(num);
-				
-				//反馈信息
-				finish_instruct((unsigned char *)"ook");
+				else { 
+					if(0 == hFlag){
+						hFlag = 1;		//首次敲击
+						enable_arm(); 	//上刚度
+						recovery_pos(); //回复姿态
+					}
+					hit_key(num); 							//敲击琴键
+					finish_instruct((unsigned char *)"ook");//反馈信息
+				}
 			}
-			
-			//设置pFlag标志
-			pFlag = 0;
+			pFlag = 0; //设置pFlag标志
         }
         else{ //('p' == instruct[0])
         	num = strlen((char *)instruct);
@@ -716,9 +731,9 @@ void play_misic(int musicNum)
     
     //回到初始位置
     from_A_to_B(CurKeyNum, 14);
-    CurKeyNum = 14;
+    CurKeyNum = 14; CurRNum = 14;
     from_A_to_B(CurKeyNum, 5);
-    CurKeyNum = 5;
+    CurKeyNum = 5; CurLNum = 5;
     delay_us(1000*1000);
     fclose(fpR);
 }
@@ -731,10 +746,14 @@ void hit_key(int keyNum)
     from_A_to_B(CurKeyNum, keyNum);
     
     //确认停稳
-    if(keyNum <= 9)
+    if(keyNum <= 9) {
         wait_arm_stop_exten('L', 10);
-    else
+        CurLNum = keyNum;
+    }
+    else {
         wait_arm_stop_exten('R', 10);
+        CurRNum = keyNum;
+    }
     
     delay_us(1000 * 1000);
     
@@ -768,14 +787,14 @@ void play_temp_music(char *keyNum)
         finish_instruct((unsigned char *)keyChar);
         
         //延时一定的时间
-        delay_us(200 * 1000);
+        delay_us(70 * 1000);
     }
     
     //回到初始位置
     from_A_to_B(CurKeyNum, 14);
-    CurKeyNum = 14;
+    CurKeyNum = 14; CurRNum = 14;
     from_A_to_B(CurKeyNum, 5);
-    CurKeyNum = 5;
+    CurKeyNum = 5; CurLNum = 5;
     
     delay_us(1000*1000);
 }

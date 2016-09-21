@@ -254,16 +254,16 @@ void execute_instruct(unsigned char *instruct)
 					if(5 != CurLNum) {
 						from_A_to_B(CurLNum, 5);
 						CurKeyNum = 5;
+						CurLNum = 5;
+						wait_arm_stop_exten('L', 10);
 					}
 					//检测右臂是否在初始位置
 					if(14 != CurRNum) {
 						from_A_to_B(CurRNum, 14);
 						CurKeyNum = 14;
+						CurRNum = 14;
+						wait_arm_stop_exten('R', 10);
 					}
-					
-					//等待运动到初始位置
-					wait_arm_stop_exten('L', 10);
-    				wait_arm_stop_exten('R', 10);
     				delay_us(1000*1000);
     				
     				//松掉刚度

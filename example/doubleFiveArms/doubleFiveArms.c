@@ -541,8 +541,8 @@ int wait_arm_stop_exten(char dir, int exten)
 void from_A_to_B(int num1, int num2)
 {
     int base = 1, start[5], end[5], posK;
-    int i, j, path[6][5], diffK[5], speK[5];
-    double unit[7];
+    int i, j, path[9][5], diffK[5], speK[5], pathNum = 9;
+    double unit[5];
     
     if((num1 <= 9) && (num2 <= 9)) {
         //完全在左边运动
@@ -593,10 +593,10 @@ void from_A_to_B(int num1, int num2)
     
     //计算单位刻度
     for(i = 0; i < SERVO_NUM/2; i++)
-        unit[i] = (double)diffK[i] / 6.0;
+        unit[i] = (double)diffK[i] / pathNum;
         
     //计算path
-    for(i = 1; i <= 6; i++) {
+    for(i = 1; i <= pathNum; i++) {
         for(j = 0; j < 5; j++) {
             path[i - 1][j] = unit[j] * i;
         }
@@ -607,7 +607,7 @@ void from_A_to_B(int num1, int num2)
     for(i = 0; i < SERVO_NUM/2; i++)
         set_one_servo_word(i+base, Moving_Speed, speK[i]);
     //运动到目标位置
-    for(i = 0; i < 6; i++) {
+    for(i = 0; i < pathNum; i++) {
         for(j = 0; j < 5; j++) {
             posK = path[i][j] + start[j];
             set_one_servo_word(j+base, Goal_Position, posK);

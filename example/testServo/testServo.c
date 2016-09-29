@@ -47,6 +47,16 @@ int main()
         if(0 == scanf("%c", &choice)) return 0;
         if('q' == choice) {
             printf("being exiting ...\n");
+            set_one_servo_word(1, Torque_Enable, 0);
+            set_one_servo_word(2, Torque_Enable, 0);
+            set_one_servo_word(3, Torque_Enable, 0);
+            set_one_servo_word(4, Torque_Enable, 0);
+            set_one_servo_word(5, Torque_Enable, 0);
+            set_one_servo_word(6, Torque_Enable, 0);
+            set_one_servo_word(7, Torque_Enable, 0);
+            set_one_servo_word(8, Torque_Enable, 0);
+            set_one_servo_word(9, Torque_Enable, 0);
+            set_one_servo_word(10, Torque_Enable, 0);
             break;
         }
         else if('s' == choice) {
@@ -62,6 +72,7 @@ int main()
         }
         else if('m' == choice) {
             //获取当前位置
+            
             value[0] = get_one_servo_word(6, Present_Position);
             value[1] = get_one_servo_word(7, Present_Position);
             value[2] = get_one_servo_word(8, Present_Position);
@@ -80,6 +91,27 @@ int main()
             set_one_servo_word(8, Goal_Position, value[2]);
             set_one_servo_word(9, Goal_Position, value[3]);
             set_one_servo_word(10, Goal_Position, value[4]);
+            
+            /*
+            value[0] = get_one_servo_word(1, Present_Position);
+            value[1] = get_one_servo_word(2, Present_Position);
+            value[2] = get_one_servo_word(3, Present_Position);
+            value[3] = get_one_servo_word(4, Present_Position);
+            value[4] = get_one_servo_word(5, Present_Position);
+            printf("servo 1 pre-position %d\n", value[0]);
+            printf("servo 2 pre-position %d\n", value[1]);
+            printf("servo 3 pre-position %d\n", value[2]);
+            printf("servo 4 pre-position %d\n", value[3]);
+            printf("servo 5 pre-position %d\n", value[4]);
+             printf("please input servo goal-position:");
+             if(0 == scanf("%d %d %d %d %d", &value[0], &value[1],
+                &value[2], &value[3], &value[4])) return 0;
+            set_one_servo_word(1, Goal_Position, value[0]);
+            set_one_servo_word(2, Goal_Position, value[1]);
+            set_one_servo_word(3, Goal_Position, value[2]);
+            set_one_servo_word(4, Goal_Position, value[3]);
+            set_one_servo_word(5, Goal_Position, value[4]);
+            */
         }
         else{
         
@@ -223,14 +255,24 @@ int default_pos()
     }
     
     //运动到目标位置
-    valueR[0] = 719; valueR[1] = 342; valueR[2] = 765; 
-    valueR[3] = 711; valueR[4] = 213;
+    
+    valueR[0] = 796; valueR[1] = 422; valueR[2] = 599; 
+    valueR[3] = 695; valueR[4] = 209;
     set_one_servo_word(10, Goal_Position, valueR[4]);
     delay_us(500000);
     for(i = 1; i <= 4; i++) {
         //result = set_arm_word('R', Goal_Position, valueR);
         set_one_servo_word(i+5, Goal_Position, valueR[i-1]);
     }
+    /*
+    valueR[0] = 334; valueR[1] = 616; valueR[2] = 614; 
+    valueR[3] = 304; valueR[4] = 763;
+    set_one_servo_word(5, Goal_Position, valueR[4]);
+    delay_us(500000);
+    for(i = 1; i <= 4; i++) {
+        //result = set_arm_word('R', Goal_Position, valueR);
+        set_one_servo_word(i, Goal_Position, valueR[i-1]);
+    }*/
     
     return 1;
 }

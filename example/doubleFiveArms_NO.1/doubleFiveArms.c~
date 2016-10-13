@@ -35,6 +35,7 @@ int set_arm_byte(char dir, int address, int *value);
 int set_arm_word(char dir, int address, int *value);
 int wait_arm_stop_exten(char dir, int exten);//等待运动停止
 void from_A_to_B(int num1, int num2);        //从A段时平滑的运动到B
+void from_A_to_B_order(int num1, int num2);  //从A处按序运动到B处
 void hit_and_hit(int num);                   //敲打音乐
 void play_misic(int musicNum);               //演奏曲目
 void hit_key(int keyNum);                    //即兴演奏
@@ -342,25 +343,6 @@ void execute_instruct(unsigned char *instruct)
     		finish_instruct((unsigned char *)"ook");
     		relax_arm();
     	}
-    	/*
-    	if(2 == pFlag) { //拼接结束
-    		play_temp_music(temp); //解析并处理字符信息
-
-            finish_instruct((unsigned char *)"oover"); //反馈信息
-            
-    		pFlag = 0; //回到初始值状态
-    		
-    		//清空temp
-    		memset(temp, 0, 60);
-    		
-    		//松掉刚度
-    		relax_arm();
-    	}
-    	
-    	if(0 == pFlag) {
-    		finish_instruct((unsigned char *)"ook");
-    		relax_arm();
-    	}*/
     }
 }
 
@@ -541,7 +523,7 @@ int wait_arm_stop_exten(char dir, int exten)
 void from_A_to_B(int num1, int num2)
 {
     int base = 1, start[5], end[5], posK;
-    int i, j, path[9][5], diffK[5], speK[5], pathNum = 9;
+    int i, j, path[11][5], diffK[5], speK[5], pathNum = 11;
     double unit[5];
     
     if((num1 <= 9) && (num2 <= 9)) {
@@ -600,6 +582,113 @@ void from_A_to_B(int num1, int num2)
         for(j = 0; j < 5; j++) {
             path[i - 1][j] = unit[j] * i;
         }
+    }
+    
+    //从A运动到B
+    //设置速度
+    for(i = 0; i < SERVO_NUM/2; i++)
+        set_one_servo_word(i+base, Moving_Speed, speK[i]);
+    //运动到目标位置
+    for(i = 0; i < pathNum; i++) {
+        for(j = 0; j < 5; j++) {
+            posK = path[i][j] + start[j];
+            set_one_servo_word(j+base, Goal_Position, posK);
+            delay_us(2.5 * 1000);
+        }
+    }
+    for(j = 0; j < 5; j++) 
+        set_one_servo_word(j + base, Goal_Position, end[j]);
+}
+
+//从A处按序运动到B处
+void from_A_to_B_order(int num1, int num2)
+{
+	int base = 1, mid, start[5], end[5], middle[5], posK;
+    int i, j, path[12][5], diffK[5], speK[5], pathNum = 6;
+    double unit[5];
+    
+    if((num1 <= 9) && (num2 <= 9)) {
+        //完全在左边运动
+        mid = (num1 + num2)/2;
+        base = 6;
+        for(i = 0; i < SERVO_NUM/2; i++) {
+            start[i] = LKeyPos[num1][i];
+            middle[i] = LKeyPos[mid][i];
+            end[i] = LKeyPos[num2][i];
+            CurLArm[i] = end[i];
+        }
+        //更新当前位置
+        CurLNum = num2;
+    }
+    else if((num1 <= 9) && (num2 >= 10)) {
+        //从左运动到右运动
+        mid = (CurRNum + num2)/2;
+        base = 1;
+        for(i = 0; i < SERVO_NUM/2 ; i++) {
+            start[i] = CurRArm[i];
+            middle[i] = RKeyPos[mid - 9][i];
+            end[i] = RKeyPos[num2 - 9][i];
+            CurRArm[i] = end[i];
+        }
+        //更新当前位置
+        CurRNum = num2;
+    }
+    else if((num1 >= 10) && (num2 <= 9)) {
+        //从右运动到左
+        mid = (CurLNum + num2)/2;
+        base = 6;
+        for(i = 0; i < SERVO_NUM/2; i++) {
+            start[i] = CurLArm[i];
+            middle[i] = LKeyPos[mid][i];
+            end[i] = LKeyPos[num2][i];
+            CurLArm[i] = end[i];
+        }
+        //更新当前位置
+        CurLNum = num2;
+    }
+    else if((num1 >= 10) && (num2 >= 10)) {
+        //完全在右边运动
+        mid = (num1+num2)/2;
+        base = 1;
+        for(i = 0; i < SERVO_NUM/2; i++) {
+            start[i] = RKeyPos[num1 - 9][i];
+            middle[i] = RKeyPos[num1 - 9][i];
+            end[i] = RKeyPos[num2 - 9][i];
+            CurRArm[i] = end[i];
+        }
+        //更新当前位置
+        CurRNum = num2;
+    }
+    else 
+        exit(1);
+        
+    //计算刻度之差和速度
+    for(i = 0; i < SERVO_NUM/2; i++) {
+        diffK[i] = end[i] - start[i];
+        speK[i] = (int)(((double)abs(diffK[i]) + 2));
+        if(speK[i] >= 1020)
+            speK[i] = 1020;
+    }
+    
+    //计算path1
+    for(i = 0; i < SERVO_NUM/2; i++)
+    	diffK[i] = middle[i] - start[i];
+    for(i = 0; i < SERVO_NUM/2; i++)
+        unit[i] = (double)diffK[i] / pathNum;
+    for(i = 1; i <= pathNum; i++) {
+        for(j = 0; j < 5; j++) {
+            path[i - 1][j] = unit[j] * i;
+        }
+    }
+    
+    //计算path2
+    for(i = 0; i < SERVO_NUM/2; i++)
+    	diffK[i] = end[i] - middle[i];
+    for(i = 0; i < SERVO_NUM/2; i++)
+    	unit[i] = (double)diffK[i] / pathNum;
+    for(i = 1; i <= pathNum; i++) {
+    	for(j = 0; j < 5; j++) 
+    		path[i + pathNum - 1][j] = unit[j] * i + path[pathNum-1][j];
     }
     
     //从A运动到B
@@ -743,7 +832,7 @@ void hit_key(int keyNum)
 {
     
     //运动到目标键序
-    from_A_to_B(CurKeyNum, keyNum);
+    from_A_to_B_order(CurKeyNum, keyNum);
     
     //确认停稳
     if(keyNum <= 9) {

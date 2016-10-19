@@ -12,6 +12,8 @@
 #include "dmath.h"
 #include "serialCommuni.h"
 
+#define MODE (2) //1:代表与一体机通信模式；2：代表与蓝牙通信模式
+
 //设置默认值
 #define SERVO_NUM (10)
 static int DEVICE = 0;
@@ -81,11 +83,17 @@ void initial_sys(int device, int bandnum)
     int i;
     
     //打开串口
+#if (MODE == 1)
     if(1 != serial_open(5, 1200)) {
         printf("doubelFiveArms:initial_sys:serial_open failed\n");
         exit(0);
     }
-
+#elif (MODE == 2)
+    if(1 != serial_open(2, 115200)) {
+        printf("doubelFiveArms:initial_sys:serial_open failed\n");
+        exit(0);
+    }
+#endif
     //打开USB2Dynamixel
     if(dxl_initialize(device, bandnum) == 0) {
         printf("Failed to open USB2Dynamixel!\n");
@@ -164,6 +172,7 @@ void receive_instruct(unsigned char *instruct)
     
     while(1) {
         //1.获取字符
+#if (MODE == 1) //与一体机通信模式
         flag = receiveMessage(instruct, 60);
         if(-1 == flag) {
             printf("\rreceive data failed!");
@@ -186,6 +195,30 @@ void receive_instruct(unsigned char *instruct)
         }
         else{
         }
+#elif (MODE == 2) //与蓝牙通信模式
+        flag = receiveMessage(instruct, 60);
+        if(-1 == flag) {
+            printf("receive data failed!\n");
+            fflush(stdout);
+        }
+        else if(0 == flag) {
+            printf("\rcontinue receiving data ...");
+            fflush(stdout);
+        }
+        else if(flag > 0) {
+            printf("\nprint data ...");
+            fflush(stdout);
+            if(flag >= 59)
+                instruct[59] = '\0';
+            else
+                instruct[flag] = '\0';
+            printf("the receiving data (%s)\n", instruct);
+            fflush(stdout);
+            break;
+        }
+        else{
+        }
+#endif
     }
 }
 

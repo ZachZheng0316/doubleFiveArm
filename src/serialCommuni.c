@@ -9,6 +9,7 @@
 #include <sys/time.h>
 
 #define MAXDATA (50)
+#define MODE    (2) 
 
 static int fd = -1;
 unsigned char Data[MAXDATA];
@@ -31,7 +32,11 @@ int serial_open(int deviceIndex, float baudrate)
 		goto DXL_HAL_OPEN_ERROR;
 	}
 	/*2. 设置串口属性*/
+#if (MODE == 1)
 	newtio.c_cflag		= B1200|CS8|CLOCAL|CREAD;//波特率38400, 字符长度掩码CS8，忽略modem控制线，打开接收者
+#elif (MODE == 2)
+    newtio.c_cflag		= B115200|CS8|CLOCAL|CREAD;
+#endif
 	newtio.c_iflag		= IGNPAR;
 	newtio.c_oflag		= 0;
 	newtio.c_lflag		= 0;
@@ -71,7 +76,11 @@ int serial_open(int deviceIndex, float baudrate)
 		goto DXL_HAL_OPEN_ERROR;
 	}
 	//设置串口属性
+#if (MODE == 1)
 	newtio.c_cflag		= B1200|CS8|CLOCAL|CREAD;//波特率38400, 字符长度掩码CS8，忽略modem控制线，打开接收者
+#elif (MODE == 2)
+    newtio.c_cflag		= B115200|CS8|CLOCAL|CREAD;
+#endif
 	newtio.c_iflag		= IGNPAR;
 	newtio.c_oflag		= 0;
 	newtio.c_lflag		= 0;

@@ -10,6 +10,8 @@
 #include "AX12A.h"
 #include "dmath.h"
 
+#define NOARMS (2) //表示机械臂的编号
+
 //设置默认值
 #define SERVO_NUM (10)
 static int DEVICE = 0;

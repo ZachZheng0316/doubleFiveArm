@@ -12,6 +12,8 @@
 
 //默认设置
 #define SERVO_NUM (10)
+#define NOARMS (2)
+
 static int DEVICE = 0;
 static int BAUDNUM = 1;
 static int CurLArm[5]; //左臂当前的位置
@@ -611,6 +613,7 @@ int initial_sys(int device, int bandnum)
     
     //参数初始化
     //1.slope
+#if (NOARMS == 1)
     for(i = 0; i < SERVO_NUM; i++) {
         set_one_servo_byte(i+1, CW_Slope, 64);
         set_one_servo_byte(i+1, CCW_Slope, 64);
@@ -619,6 +622,12 @@ int initial_sys(int device, int bandnum)
     set_one_servo_byte(2, CCW_Slope, 32);
     set_one_servo_byte(7, CW_Slope, 32);
     set_one_servo_byte(7, CCW_Slope, 32);
+#elif (NOARMS == 2)
+    for(i = 0; i < SERVO_NUM; i++) {
+        set_one_servo_byte(i+1, CW_Slope, 32);
+        set_one_servo_byte(i+1, CCW_Slope, 32);
+    }
+#endif
         
     //激活
     for(i = 0; i < SERVO_NUM; i++) 

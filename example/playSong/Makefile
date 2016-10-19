@@ -6,8 +6,8 @@ LIBDIRS		+= -L../../lib
 CFLAGS		= $(INCLUDEDIRS) -W -Wall -O2
 LDFLAGS		= $(LIBDIRS) -lm -ldxl
 
-#CC			= gcc
-CC			= arm-linux-gnueabi-gcc
+CC			= gcc
+#CC			= arm-linux-gnueabi-gcc
 
 $(TARGET): $(OBJS)
 	$(CC) -o $@ $^ $(LDFLAGS)
